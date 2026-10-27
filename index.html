@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca Digital de Livros</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans transition-colors duration-300">
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-md">
+        <div class="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-book-open-reader text-3xl"></i>
+                <h1 class="text-2xl font-bold">Minha Biblioteca Digital</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="themeToggle" class="bg-indigo-700 hover:bg-indigo-800 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                    <i class="fa-solid fa-moon"></i> <span>Modo Escuro</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8 flex-grow max-w-6xl">
+        <!-- Tabs / Navigation -->
+        <div class="flex border-b border-slate-200 mb-6 gap-4">
+            <button id="tabMinhaBiblioteca" class="tab-btn pb-3 font-semibold text-indigo-600 border-b-2 border-indigo-600 transition">
+                <i class="fa-solid fa-book mr-2"></i> Minha Biblioteca (Firestore)
+            </button>
+            <button id="tabCatalogo" class="tab-btn pb-3 font-semibold text-slate-500 hover:text-slate-800 transition">
+                <i class="fa-solid fa-globe mr-2"></i> Buscar na Open Library API
+            </button>
+        </div>
+
+        <!-- Section: Minha Biblioteca -->
+        <section id="sectionMinhaBiblioteca" class="space-y-6">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-slate-500 font-medium">Total de Livros</p>
+                        <h3 id="statTotal" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-books"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-slate-500 font-medium">Livros Lidos</p>
+                        <h3 id="statLidos" class="text-2xl font-bold text-emerald-600">0</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-slate-500 font-medium">Desejados</p>
+                        <h3 id="statDesejados" class="text-2xl font-bold text-amber-600">0</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-bookmark"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Bar -->
+            <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row gap-3 flex-grow">
+                    <div class="relative flex-grow">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-search"></i>
+                        </span>
+                        <input type="text" id="searchInput" placeholder="Pesquisar na minha biblioteca..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <select id="filterStatus" class="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
+                        <option value="todos">Todos os Status</option>
+                        <option value="lido">Lido</option>
+                        <option value="desejado">Desejado</option>
+                        <option value="lendo">Lendo</option>
+                    </select>
+                </div>
+                <button id="btnOpenModal" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-plus"></i> Novo Livro
+                </button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="firestoreLoading" class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
+                <p class="text-slate-500 text-sm mt-3">Carregando dados do Firestore...</p>
+            </div>
+
+            <!-- Books Grid -->
+            <div id="booksGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm p-8">
+                <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-700 mb-1">Nenhum livro cadastrado</h3>
+                <p class="text-slate-500 text-sm mb-4">Cadastre seu primeiro livro ou busque na Open Library.</p>
+                <button id="btnEmptyAdd" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                    Adicionar Livro
+                </button>
+            </div>
+        </section>
+
+        <!-- Section: Catalogo Open Library API -->
+        <section id="sectionCatalogo" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-bold text-slate-800 mb-2">Buscar no Catálogo Externo (Open Library API)</h2>
+                <p class="text-sm text-slate-500 mb-4">Pesquise por milhões de livros disponíveis na API pública da Open Library e cadastre-os no Firestore com um clique.</p>
+                <div class="flex gap-2">
+                    <div class="relative flex-grow">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-globe"></i>
+                        </span>
+                        <input type="text" id="apiSearchInput" placeholder="Ex: O Senhor dos Anéis, Machado de Assis..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <button id="btnSearchApi" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                        <i class="fa-solid fa-search"></i> Buscar
+                    </button>
+                </div>
+            </div>
+
+            <!-- API Loading -->
+            <div id="apiLoading" class="hidden text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
+                <p class="text-slate-500 text-sm mt-3">Buscando na Open Library API...</p>
+            </div>
+
+            <!-- API Results Grid -->
+            <div id="apiResultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+    </main>
+
+    <!-- Modal Formulário Livro (CRUD) -->
+    <div id="bookModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden border border-slate-200">
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+                <h3 id="modalTitle" class="font-bold text-lg">Adicionar Novo Livro</h3>
+                <button id="btnCloseModalHeader" class="text-white/80 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="bookForm" class="p-6 space-y-4">
+                <input type="hidden" id="bookId">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Título *</label>
+                    <input type="text" id="bookTitle" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Autor *</label>
+                        <input type="text" id="bookAuthor" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Ano de Publicação</label>
+                        <input type="number" id="bookYear" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                        <select id="bookStatus" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
+                            <option value="desejado">Desejado</option>
+                            <option value="lendo">Lendo</option>
+                            <option value="lido">Lido</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nota (1 a 5)</label>
+                        <select id="bookRating" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
+                            <option value="0">Sem avaliação</option>
+                            <option value="1">⭐ 1 - Ruim</option>
+                            <option value="2">⭐⭐ 2 - Regular</option>
+                            <option value="3">⭐⭐⭐ 3 - Bom</option>
+                            <option value="4">⭐⭐⭐⭐ 4 - Muito Bom</option>
+                            <option value="5">⭐⭐⭐⭐⭐ 5 - Excelente</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">URL da Capa (Opcional)</label>
+                    <input type="url" id="bookCover" placeholder="https://..." class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Anotações / Resenha</label>
+                    <textarea id="bookNotes" rows="3" placeholder="Suas impressões sobre o livro..." class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" id="btnCloseModal" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shadow-sm">Salvar no Firestore</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-3 z-50 text-sm">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMessage">Ação realizada com sucesso!</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 mt-auto">
+        <p>Biblioteca Digital de Livros &copy; 2026 - Conectado ao Firebase Firestore</p>
+    </footer>
+
+    <!-- Script principal (ES Module para suportar SDK v9+ do Firebase) -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>
